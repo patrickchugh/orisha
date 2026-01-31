@@ -1,50 +1,157 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+  SYNC IMPACT REPORT
+  ==================
+  Version change: 1.1.0 → 1.2.0 (canonical data formats added to Principle V)
+
+  Modified principles:
+  - V. Tool Agnosticism: Added canonical data format requirements (CanonicalSBOM, CanonicalArchitecture, CanonicalAST)
+
+  Added principles: None
+
+  Added sections: None
+  Removed sections: None
+
+  Quality Gates added:
+  - Canonical Format Compliance: All adapters MUST output validated canonical types
+
+  Templates validated:
+  - .specify/templates/plan-template.md ✅ (Constitution Check section compatible)
+  - .specify/templates/spec-template.md ✅ (no constitution-specific requirements)
+  - .specify/templates/tasks-template.md ✅ (no constitution-specific requirements)
+
+  Dependent artifacts already updated:
+  - specs/001-system-doc-generator/plan.md ✅ (models/canonical/ added to structure)
+  - specs/001-system-doc-generator/data-model.md ✅ (canonical formats defined)
+
+  Follow-up TODOs: None
+-->
+
+# Orisha Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Deterministic-First
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+All analysis MUST be performed using deterministic methods before any LLM invocation.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+- Source code analysis via AST parsing MUST precede LLM summarization
+- Dependency scanning via Syft MUST complete before LLM processing
+- Infrastructure diagrams via Terravision MUST be generated before LLM descriptions
+- LLM is supplementary: it fills gaps and summarizes, never replaces deterministic analysis
+- If deterministic analysis fails for a component, that failure MUST be documented in output rather than masked by LLM-generated content
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+**Rationale**: Deterministic analysis is auditable, reproducible, and verifiable. LLM output cannot be independently verified without the underlying deterministic data.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### II. Reproducibility
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+Given the same input repository state, Orisha MUST produce semantically identical output.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+- All LLM calls MUST use `temperature=0` and other appropriate deterministic hyperparameters e.g. Top K etc
+- Output documents MUST include version history with timestamps, git refs, and author attribution
+- Minor variations in punctuation or filler words (the, an, a) are acceptable; meaning MUST be identical
+- External tool versions SHOULD be captured in output metadata to explain any future differences
+- No randomness or non-deterministic operations in the analysis pipeline
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+**Rationale**: Enterprise audit requires documentation that can be verified and compared across runs. Stakeholders must trust that changes in documentation reflect actual system changes.
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+### III. Preflight Validation
+
+All external dependencies MUST be validated before analysis begins, not during processing.
+
+- The `orisha check` command MUST verify availability of configured analysis tools
+- Missing required tools MUST cause immediate exit with clear error message listing missing dependencies
+- Missing optional tools (e.g., Terravision when no Terraform files exist) SHOULD produce warnings, not errors
+- LLM configuration MUST be validated (API key format, endpoint reachability) before processing starts
+- No partial documentation: either all prerequisites pass and full docs are generated, or processing fails fast
+
+**Rationale**: CI/CD pipelines require predictable behavior. Discovering a missing tool mid-analysis wastes resources and produces incomplete artifacts.
+
+### IV. CI/CD Compatibility
+
+Orisha MUST operate as a well-behaved CLI tool in automated environments.
+
+- No interactive prompts: all configuration via CLI args, config files, or environment variables
+- Exit codes MUST be meaningful: 0 = success, 1 = error, 2 = warnings
+- All user-facing output MUST go to stdout; all errors and diagnostics MUST go to stderr
+- JSON output mode MUST be available for machine parsing
+- Timeout handling: long-running operations MUST respect configurable timeouts
+- Environment variable substitution MUST be supported in config files (e.g., `${ANTHROPIC_API_KEY}`)
+
+**Rationale**: Orisha runs unattended in CI/CD pipelines. It must integrate cleanly with existing automation infrastructure without special handling.
+
+### V. Tool Agnosticism
+
+Orisha MUST support pluggable tools for each analysis capability, enabling users to swap implementations.
+
+- Each analysis capability (SBOM, diagrams, AST parsing) MUST be abstracted behind a common interface
+- Tool configuration MUST be explicit in config files, not hardcoded (e.g., `sbom_tool: syft` or `sbom_tool: trivy`)
+- Default tools SHOULD be provided, but alternatives MUST be configurable
+- New tool integrations MUST implement the same interface as existing tools for that capability
+- Tool-specific code MUST be isolated in adapter modules, not scattered throughout the codebase
+- Multi-cloud support: infrastructure analyzers MUST NOT assume a single cloud provider
+- **Canonical Data Formats**: All tool adapters MUST transform tool-specific output into canonical internal formats (`CanonicalSBOM`, `CanonicalArchitecture`, `CanonicalAST`)
+- The rest of the codebase MUST only consume canonical formats, never tool-specific output
+- Adding a new tool MUST NOT require changes outside the adapter module
+
+**Rationale**: Enterprise environments have diverse toolchains. Mandating specific tools creates adoption friction. Canonical internal formats ensure that swapping tools requires only a new adapter—no changes to renderers, templates, or other components.
+
+### VI. Human Annotation Persistence
+
+User-provided content MUST be mergeable with generated documentation.
+
+- Human sections MUST be defined in YAML config referencing markdown files
+- Human markdown files (`.orisha/sections/*.md`) MUST be merged with generated content
+- Merge strategies (prepend, append, replace) MUST be configurable per section
+- Human content files MUST NOT be modified by Orisha—they are user-owned
+- Version history MUST distinguish between human-authored and Orisha-generated changes
+- If a referenced section file is missing, Orisha MUST warn and continue without it
+
+**Rationale**: Documentation often requires human insight that cannot be derived from code analysis. File-based sections keep human content cleanly separated and easy to edit.
+
+## Quality Gates
+
+These gates apply to all implementations and MUST be checked before merging:
+
+| Gate | Requirement | Enforcement |
+|------|-------------|-------------|
+| Deterministic Analysis | All new analyzers MUST produce identical output for identical input | Unit test with fixture comparison |
+| Preflight Check | New external dependencies MUST be added to `orisha check` | Integration test verifies check coverage |
+| Exit Codes | All error paths MUST set appropriate exit codes | CLI integration tests |
+| No Interactive Prompts | All user input MUST come from args/config/env | CI test runs with `--ci` flag |
+| Reproducibility | Two consecutive runs on same repo MUST produce semantically identical output | Integration test with diff analysis |
+| Tool Abstraction | New tool integrations MUST implement capability interface | Interface compliance tests |
+| Canonical Format Compliance | All adapters MUST output validated canonical types; no tool-specific data escapes adapters | Unit tests verify schema conformance |
+| Section Merging | Human sections from config MUST merge correctly with generated content | Integration test with section files |
+
+## Development Workflow
+
+### Code Review Requirements
+
+- All PRs MUST include verification that changes comply with Core Principles
+- New analyzers MUST include deterministic output tests
+- New CLI options MUST include `--ci` mode compatibility verification
+- External tool integrations MUST include preflight check additions
+- New tool integrations MUST implement the standard capability interface and output canonical formats
+- New tool adapters MUST NOT expose tool-specific data structures outside the adapter module
+- Changes affecting templates MUST verify human content preservation
+
+### Testing Requirements
+
+- Unit tests for all analyzers with fixture-based comparison
+- Integration tests for CLI commands with exit code verification
+- Reproducibility tests comparing consecutive runs
+- CI mode tests ensuring no interactive prompts
+- Interface compliance tests for tool adapters
+- Canonical format schema validation tests for all adapter outputs
+- Human content merge tests with conflict detection
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+This constitution supersedes all other development practices for the Orisha project.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+- **Amendments**: Changes to Core Principles require documentation of rationale and migration plan
+- **Compliance**: All PRs and code reviews MUST verify adherence to Core Principles
+- **Violations**: Any deviation from MUST requirements requires explicit justification in Complexity Tracking section of plan.md
+- **Version Control**: Constitution changes follow semantic versioning (MAJOR.MINOR.PATCH)
+
+**Version**: 1.2.0 | **Ratified**: 2026-01-31 | **Last Amended**: 2026-01-31
