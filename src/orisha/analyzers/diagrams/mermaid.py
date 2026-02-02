@@ -213,7 +213,10 @@ class MermaidGenerator:
         Returns:
             Mermaid flowchart syntax string
         """
-        lines = [f"flowchart TD"]
+        lines = [
+            "%%{init: {'flowchart': {'curve': 'linear'}}}%%",
+            "flowchart TD",
+        ]
 
         # Add title as a comment
         lines.append(f"    %% {title}")

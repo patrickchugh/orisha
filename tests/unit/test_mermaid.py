@@ -31,7 +31,8 @@ class TestMermaidGenerator:
 
         result = generator.generate_module_flowchart(graph)
 
-        assert result.mermaid.startswith("flowchart TD")
+        assert "flowchart TD" in result.mermaid
+        assert "curve" in result.mermaid  # Straight line config
         assert result.node_count == 3
         assert result.simplified is False
         assert "main" in result.mermaid
@@ -213,7 +214,7 @@ class TestMermaidGenerator:
         result = generate_module_flowchart(graph)
 
         assert result is not None
-        assert result.mermaid.startswith("flowchart TD")
+        assert "flowchart TD" in result.mermaid
 
     def test_display_name_extraction(self, generator: MermaidGenerator) -> None:
         """Test extracting display-friendly names."""
