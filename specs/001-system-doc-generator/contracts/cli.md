@@ -122,7 +122,7 @@ orisha check [OPTIONS]
 
 ### `orisha init`
 
-Initialize Orisha configuration for a repository.
+Initialize Orisha configuration for a repository with interactive LLM provider setup.
 
 ```
 orisha init [OPTIONS]
@@ -132,12 +132,53 @@ orisha init [OPTIONS]
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `--format` | CHOICE | `yaml` | Config format: yaml, toml |
 | `--force` | FLAG | false | Overwrite existing config |
+| `--non-interactive` | FLAG | false | Skip interactive prompts, use defaults |
+
+#### Interactive Flow
+
+When run interactively (default), the command prompts:
+
+1. **LLM Provider Selection**: User must choose Ollama, Claude, Gemini, or AWS Bedrock (no default)
+2. **Credential Input**: Provider-specific credentials (API key or AWS credentials)
+3. **Connectivity Test**: Validates provider connectivity/credentials
+4. **Configuration Save**: Writes settings to `.orisha/config.yaml`
+
+```
+$ orisha init
+
+Initializing Orisha configuration...
+
+Select LLM provider:
+  [1] Ollama (local - no data leaves machine)
+  [2] Claude (Anthropic API)
+  [3] Gemini (Google API)
+  [4] AWS Bedrock
+Choice: 4
+
+AWS Bedrock requires AWS credentials configured via:
+  - Environment variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY)
+  - AWS credentials file (~/.aws/credentials)
+  - IAM role (when running on AWS)
+
+Enter AWS region [us-east-1]: us-west-2
+Enter Bedrock model ID [anthropic.claude-3-sonnet-20240229-v1:0]:
+✓ AWS credentials detected
+
+Created .orisha/config.yaml
+LLM provider: claude (claude-3-5-sonnet-20241022)
+
+Run 'orisha check' to verify all dependencies.
+```
 
 #### Behavior
 
-Creates `.orisha/config.yaml` (or `.toml`) with default settings and a sample template at `.orisha/template.md.j2`.
+Creates `.orisha/config.yaml` with:
+- Selected LLM provider and credentials
+- Default output settings (./docs/system.md, markdown format)
+- Default tool configuration (syft, terravision)
+
+With `--non-interactive`, requires `--provider` flag or `ORISHA_LLM_PROVIDER` environment variable (no default).
 
 ---
 
@@ -196,10 +237,14 @@ sections:
 
 # LLM settings (optional - works without LLM)
 llm:
-  provider: "claude"           # claude | gemini | ollama
+  provider: "claude"           # claude | gemini | ollama | bedrock
   model: "claude-3-5-sonnet-20241022"
   api_key: "${ANTHROPIC_API_KEY}"
   temperature: 0               # Must be 0 for reproducibility
+  # For AWS Bedrock:
+  # provider: "bedrock"
+  # model: "anthropic.claude-3-sonnet-20240229-v1:0"
+  # aws_region: "us-east-1"   # Uses AWS credentials from env/profile
 
 # CI/CD settings
 ci:
@@ -215,6 +260,10 @@ ci:
 | `ANTHROPIC_API_KEY` | Claude API key | LLM (claude) |
 | `GOOGLE_API_KEY` | Gemini API key | LLM (gemini) |
 | `OLLAMA_HOST` | Ollama API base URL | LLM (ollama) |
+| `AWS_ACCESS_KEY_ID` | AWS access key for Bedrock | LLM (bedrock) |
+| `AWS_SECRET_ACCESS_KEY` | AWS secret key for Bedrock | LLM (bedrock) |
+| `AWS_REGION` | AWS region for Bedrock (default: us-east-1) | LLM (bedrock) |
+| `AWS_PROFILE` | AWS profile name (alternative to keys) | LLM (bedrock) |
 | `CI` | Set to "true" in CI environments | Auto-enable CI mode |
 | `ORISHA_CONFIG` | Override config file path | Configuration loading |
 

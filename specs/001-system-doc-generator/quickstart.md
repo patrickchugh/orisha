@@ -122,7 +122,7 @@ sections:
 
 # LLM settings (optional - works without LLM)
 llm:
-  provider: "claude"         # or: gemini, ollama
+  provider: "claude"         # or: gemini, ollama, bedrock
   model: "claude-3-5-sonnet-20241022"
   api_key: "${ANTHROPIC_API_KEY}"
   temperature: 0             # required for reproducibility
@@ -151,9 +151,14 @@ Then run `orisha write` as usual.
 | `technology_stack` | object | Languages, frameworks, dependencies |
 | `sbom` | object | Software Bill of Materials |
 | `architecture_diagram` | object | Terraform diagram info |
-| `source_analysis` | object | Code structure analysis |
+| `source_analysis` | object | Code structure analysis (functions, classes, with explanations) |
+| `llm_summaries` | object | LLM-generated section content |
+| `function_explanations` | object | LLM-generated function behavior descriptions |
+| `sections` | object | Human content for merging |
 | `version_history` | list | Document version history |
 | `generated_at` | datetime | Generation timestamp |
+
+See the [Template Contract](contracts/template.md) for full variable documentation and default section structure.
 
 ---
 
@@ -245,5 +250,6 @@ orisha write --verbose
 ## Next Steps
 
 - Read the [CLI Reference](contracts/cli.md) for all commands and options
+- Review the [Template Contract](contracts/template.md) for default sections and variables
 - Review the [Data Model](data-model.md) to understand output structure
 - Customize the default template for your organization's standards
