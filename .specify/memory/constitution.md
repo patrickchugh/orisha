@@ -1,10 +1,11 @@
 <!--
   SYNC IMPACT REPORT
   ==================
-  Version change: 1.1.0 → 1.2.0 (canonical data formats added to Principle V)
+  Version change: 1.3.0 → 1.4.0 (LLM required, user must select provider)
 
   Modified principles:
-  - V. Tool Agnosticism: Added canonical data format requirements (CanonicalSBOM, CanonicalArchitecture, CanonicalAST)
+  - I. Deterministic-First: LLM is REQUIRED. User must select provider during orisha init (no default).
+  - III. Preflight Validation: LLM provider must be configured via orisha init before use.
 
   Added principles: None
 
@@ -12,18 +13,21 @@
   Removed sections: None
 
   Quality Gates added:
-  - Canonical Format Compliance: All adapters MUST output validated canonical types
+  - LLM Required: LLM must be available and produce valid summaries
 
   Templates validated:
   - .specify/templates/plan-template.md ✅ (Constitution Check section compatible)
   - .specify/templates/spec-template.md ✅ (no constitution-specific requirements)
   - .specify/templates/tasks-template.md ✅ (no constitution-specific requirements)
 
-  Dependent artifacts already updated:
-  - specs/001-system-doc-generator/plan.md ✅ (models/canonical/ added to structure)
-  - specs/001-system-doc-generator/data-model.md ✅ (canonical formats defined)
+  Dependent artifacts to update:
+  - specs/001-system-doc-generator/spec.md ✅ (LLM assumptions updated, no default)
+  - specs/001-system-doc-generator/tasks.md ✅ (LLM in Phase 2 foundational)
+  - specs/001-system-doc-generator/contracts/cli.md ✅ (orisha init requires provider selection)
+  - src/orisha/config.py (LLM provider must be configured, no default)
+  - src/orisha/utils/preflight.py ✅ (LLM check added)
 
-  Follow-up TODOs: None
+  Follow-up TODOs: None - all artifacts aligned
 -->
 
 # Orisha Constitution
@@ -37,10 +41,12 @@ All analysis MUST be performed using deterministic methods before any LLM invoca
 - Source code analysis via AST parsing MUST precede LLM summarization
 - Dependency scanning via Syft MUST complete before LLM processing
 - Infrastructure diagrams via Terravision MUST be generated before LLM descriptions
-- LLM is supplementary: it fills gaps and summarizes, never replaces deterministic analysis
+- LLM is REQUIRED for generating human-readable documentation summaries (deterministic analysis produces structured data, LLM produces prose)
+- LLM transforms deterministic data into readable documentation; it never replaces the underlying analysis
 - If deterministic analysis fails for a component, that failure MUST be documented in output rather than masked by LLM-generated content
+- LLM provider must be selected during `orisha init` (Ollama, Claude, Gemini, or AWS Bedrock). No default - user must explicitly choose based on their security and infrastructure requirements
 
-**Rationale**: Deterministic analysis is auditable, reproducible, and verifiable. LLM output cannot be independently verified without the underlying deterministic data.
+**Rationale**: Deterministic analysis is auditable, reproducible, and verifiable. LLM output cannot be independently verified without the underlying deterministic data. Ollama option enables security-conscious enterprises to use Orisha without sending code to external services.
 
 ### II. Reproducibility
 
@@ -58,11 +64,17 @@ Given the same input repository state, Orisha MUST produce semantically identica
 
 All external dependencies MUST be validated before analysis begins, not during processing.
 
-- The `orisha check` command MUST verify availability of configured analysis tools
-- Missing required tools MUST cause immediate exit with clear error message listing missing dependencies
-- Missing optional tools (e.g., Terravision when no Terraform files exist) SHOULD produce warnings, not errors
-- LLM configuration MUST be validated (API key format, endpoint reachability) before processing starts
+- The `orisha check` command MUST verify availability of ALL required tools:
+  - git (version control)
+  - tree-sitter + tree-sitter-language-pack (AST parsing)
+  - Syft (SBOM generation)
+  - Terravision + Graphviz (architecture diagrams)
+  - LiteLLM (unified LLM interface)
+  - LLM provider configured via `orisha init`: Ollama (local server), Claude/Gemini (API key), or Bedrock (AWS credentials)
+- Missing required tools MUST cause immediate exit with clear error message and installation instructions
+- LLM is REQUIRED: User must configure provider via `orisha init`. Ollama requires local server, Claude/Gemini require API keys, Bedrock requires AWS credentials
 - No partial documentation: either all prerequisites pass and full docs are generated, or processing fails fast
+- Users can skip specific analyzers via CLI flags (--skip-sbom, --skip-architecture) if tools are unavailable
 
 **Rationale**: CI/CD pipelines require predictable behavior. Discovering a missing tool mid-analysis wastes resources and produces incomplete artifacts.
 
@@ -121,6 +133,7 @@ These gates apply to all implementations and MUST be checked before merging:
 | Reproducibility | Two consecutive runs on same repo MUST produce semantically identical output | Integration test with diff analysis |
 | Tool Abstraction | New tool integrations MUST implement capability interface | Interface compliance tests |
 | Canonical Format Compliance | All adapters MUST output validated canonical types; no tool-specific data escapes adapters | Unit tests verify schema conformance |
+| LLM Required | LLM provider must be configured via `orisha init` and produce valid summaries | Preflight check + integration test |
 | Section Merging | Human sections from config MUST merge correctly with generated content | Integration test with section files |
 
 ## Development Workflow
@@ -154,4 +167,4 @@ This constitution supersedes all other development practices for the Orisha proj
 - **Violations**: Any deviation from MUST requirements requires explicit justification in Complexity Tracking section of plan.md
 - **Version Control**: Constitution changes follow semantic versioning (MAJOR.MINOR.PATCH)
 
-**Version**: 1.2.0 | **Ratified**: 2026-01-31 | **Last Amended**: 2026-01-31
+**Version**: 1.4.0 | **Ratified**: 2026-01-31 | **Last Amended**: 2026-02-01
